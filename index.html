@@ -129,6 +129,16 @@ textarea.txt{width:100%;min-height:220px;font-family:ui-monospace,Menlo,Consolas
 :root{--gk-solid:#2b5d7a;--gk-ink:#ffffff}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--gk-solid:#7db7d9;--gk-ink:#0b1a24}}
 :root[data-theme="dark"]{--gk-solid:#7db7d9;--gk-ink:#0b1a24}
+.acards{display:none;gap:10px}
+.acard{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:6px}
+.acard.off{opacity:.65}
+.acard .ah{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.acard .fl2{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.kvs{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-top:2px}
+.kv{display:grid;font-size:13px;color:var(--muted)}
+.kv b{color:var(--ink);font-size:15px}
+.acard .btn{width:100%;min-height:48px;margin-top:4px}
+@media (max-width:700px){.atable{display:none}.acards{display:grid}}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -413,8 +423,19 @@ function listArtikel(){
     return !q||String(a.name).toLowerCase().indexOf(q)>=0||String(a.nr||'').indexOf(q)>=0;
   }));
   if(!items.length)return '<div class="empty">Keine Artikel gefunden.</div>';
-  return '<div class="group scroll"><table><thead><tr><th>Artikel</th><th>Kanal</th><th class="r">Knapp bei</th><th class="r">Standardmenge</th><th>Prüfung</th><th></th></tr></thead><tbody>'+
+  var tbl='<div class="group scroll"><table><thead><tr><th>Artikel</th><th>Kanal</th><th class="r">Knapp bei</th><th class="r">Standardmenge</th><th>Prüfung</th><th></th></tr></thead><tbody>'+
     items.map(function(a){return '<tr data-act="edit" data-id="'+esc(a.id)+'" style="cursor:pointer"><td><div class="nm">'+esc(a.name)+(a.aktiv===false?'<span class="flag off">inaktiv</span>':'')+(a.typ==='besonders'?'<span class="flag">besonders</span>':'')+(a.vorlaeufig!==false?'<span class="flag">vorläufig</span>':'')+'</div><div class="sub">'+esc(a.lager)+' · '+esc(a.einheit)+'</div></td><td>'+esc(a.kanal)+'</td><td class="r">'+(schwelle(a)==null?'–':'≤ '+nf(schwelle(a)))+'</td><td class="r">'+nf(menge(a))+'</td><td>'+rhythmusText(a)+'</td><td><button class="btn small ghost" type="button" data-act="edit" data-id="'+esc(a.id)+'">Ändern</button></td></tr>'}).join('')+'</tbody></table></div>';
+  return '<div class="atable">'+tbl+'</div><div class="acards">'+items.map(cardHtml).join('')+'</div>';
+}
+function cardHtml(a){
+  var fl=(a.aktiv===false?'<span class="flag off">inaktiv</span>':'')+(a.typ==='besonders'?'<span class="flag">besonders</span>':'')+(a.vorlaeufig!==false?'<span class="flag">vorläufig</span>':'');
+  var kv=function(k,v){return '<div class="kv"><span>'+k+'</span><b>'+v+'</b></div>'};
+  return '<article class="acard'+(a.aktiv===false?' off':'')+'"><div class="ah"><div class="nm">'+esc(a.name)+'</div><div class="fl2">'+fl+'</div></div>'+
+    (ln(a)!==a.name?'<div class="sub">'+esc(ln(a))+'</div>':'')+
+    '<div class="sub">'+esc(a.lager)+' · '+esc(a.einheit)+(a.nr?' · Nr. '+esc(a.nr):'')+'</div>'+
+    '<div class="kvs">'+kv('Bestellen bei',esc(KLABEL[a.kanal]||a.kanal))+kv('Knapp bei',schwelle(a)==null?'–':'≤ '+nf(schwelle(a)))+kv('Standardmenge',menge(a)==null?'–':nf(menge(a)))+kv('Prüfung',rhythmusText(a))+'</div>'+
+    (a.anmerkung?'<div class="sub anm">Hinweis: '+esc(a.anmerkung)+'</div>':'')+
+    '<button class="btn" type="button" data-act="edit" data-id="'+esc(a.id)+'">Ändern</button></article>';
 }
 function viewArtikel(){
   var prov=[...S.art.values()].filter(function(a){return a.vorlaeufig!==false&&a.aktiv!==false}).length;
