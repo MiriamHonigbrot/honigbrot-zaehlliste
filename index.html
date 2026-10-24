@@ -144,6 +144,25 @@ textarea.txt{width:100%;min-height:220px;font-family:ui-monospace,Menlo,Consolas
 .kv b{color:var(--ink);font-size:15px}
 .acard .btn{width:100%;min-height:48px;margin-top:4px}
 @media (max-width:700px){.atable{display:none}.acards{display:grid}}
+.otab td:nth-child(3) input{min-width:0}
+@media (max-width:700px){
+  .otab.group{overflow:visible}
+  .otab table,.otab tbody{display:block}
+  .otab thead{display:none}
+  .otab tr{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:8px 12px;padding:12px 14px;border-top:1px solid var(--line)}
+  .otab tr:first-child{border-top:0}
+  .otab td{display:block;border:0;padding:0;min-width:0}
+  .otab td:first-child{grid-column:1 / -1}
+  .otab td.r{text-align:right}
+  .otab td:nth-child(3)::before{content:"Menge ";font-size:12px;color:var(--muted);margin-right:4px}
+  .otab td:nth-child(4){min-width:76px}
+  .otab td[colspan]{padding:6px 14px;margin:-12px -14px;grid-column:1 / -1}
+}
+.note.dismissable{position:relative;padding-right:48px}
+.xbtn{position:absolute;top:4px;right:6px;width:40px;height:40px;border:0;background:transparent;color:var(--ink);font-size:26px;line-height:1;cursor:pointer;border-radius:8px}
+.xbtn:hover{background:rgba(0,0,0,.08)}
+.hintlink{margin:4px 0}
+.hintlink button{border:0;background:none;color:var(--muted);text-decoration:underline;cursor:pointer;font:inherit;font-size:13px;padding:8px 0;min-height:40px}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -262,6 +281,15 @@ function render(){
   else if(S.tab==='einkaufen')viewEinkaufen();
   else if(S.tab==='besonders')viewBesonders();
   else viewArtikel();
+  hintBar(S.tab);
+}
+/* Die Anleitung oben in jedem Reiter lässt sich wegklicken; die Wahl wird je Gerät gemerkt. */
+function hintBar(key){
+  var first=document.querySelector('#view .note:not(.warn)');if(!first)return;
+  var hidden=false;try{hidden=localStorage.getItem('hb-hide-'+key)==='1'}catch(e){}
+  if(hidden){first.outerHTML='<div class="hintlink"><button type="button" data-act="hint" data-k="'+key+'" data-v="show">Anleitung einblenden</button></div>';return}
+  first.classList.add('dismissable');
+  first.insertAdjacentHTML('beforeend','<button type="button" class="xbtn" data-act="hint" data-k="'+key+'" data-v="hide" aria-label="Anleitung ausblenden">×</button>');
 }
 function renderHead(){
   var now=new Date(),nd=nextDelivery(now),nc=nextCheck(now),el=$('#deadline'),h='',urgent=false;
@@ -342,7 +370,7 @@ function viewBestellen(){
   if(!v.lines.length)html+='<div class="empty">Aktuell ist nichts nachzubestellen.</div>';
   else{
     var net=0,brut=0,cur=null;
-    html+='<div class="group scroll"><table><thead><tr><th>Artikel</th><th>Meldung</th><th class="r">Menge</th><th class="r">Preis netto</th></tr></thead><tbody>';
+    html+='<div class="group scroll otab"><table><thead><tr><th>Artikel</th><th>Meldung</th><th class="r">Menge</th><th class="r">Preis netto</th></tr></thead><tbody>';
     v.lines.forEach(function(l){
       var a=l.a;
       if(a.lager!==cur){cur=a.lager;html+='<tr><td colspan="4" style="background:var(--surface2);font-family:var(--display);font-size:12px;letter-spacing:.1em;text-transform:uppercase">'+esc(cur)+'</td></tr>'}
@@ -499,11 +527,13 @@ function editor(a){
 /* ---------- Aktionen ---------- */
 function needName(){if(!S.who.trim()){toast('Bitte trag oben deinen Namen ein.');$('#who').focus();return true}return false}
 async function setStatus(id,s){
-  var a=S.art.get(id);if(!a||needName())return;
-  var now=new Date().toISOString();S.keep[id]=1;
+  var a=S.art.get(id);if(!a)return;
+  var weg=(a.status===s);   // dieselbe Taste noch einmal: Auswahl zurücknehmen
+  if(!weg&&needName())return;
+  var now=weg?null:new Date().toISOString(),st=weg?null:s,wer=weg?null:S.who.trim();S.keep[id]=1;
   var prev={status:a.status,geprueft:a.geprueft,von:a.von};
-  a.status=s;a.geprueft=now;a.von=S.who.trim();render();
-  try{await S.db.doc('artikel/'+id).update({status:s,geprueft:now,von:S.who.trim()})}
+  a.status=st;a.geprueft=now;a.von=wer;render();
+  try{await S.db.doc('artikel/'+id).update({status:st,geprueft:now,von:wer})}
   catch(e){a.status=prev.status;a.geprueft=prev.geprueft;a.von=prev.von;render();toast('Konnte nicht speichern: '+(e.message||e.code||'Fehler'))}
 }
 async function restGenug(){
@@ -594,6 +624,7 @@ var actions={
   edit:function(d){var a=S.art.get(d.id);if(a)editor(a)},
   neu:function(){editor(null)},
   saveart:function(d){saveArtikel(d.id||null)},
+  hint:function(d){try{if(d.v==='hide')localStorage.setItem('hb-hide-'+d.k,'1');else localStorage.removeItem('hb-hide-'+d.k)}catch(e){}render()},
   pinok:function(){tryPin(($('#pin')||{}).value||'')},
   close:closeModal
 };
