@@ -324,6 +324,7 @@ function filtered(){
     if(a.aktiv===false||!istStandard(a))return false;
     if(S.gruppe!=='Alle'&&gruppe(a)!==S.gruppe)return false;
     if(S.lager==='Zu prüfen'){if(!needsCheck(a)&&!S.keep[a.id])return false}
+    else if(S.lager==='Geprüft'){if(needsCheck(a))return false}
     else if(S.lager!=='Alle'&&a.lager!==S.lager)return false;
     return !q||String(a.name).toLowerCase().indexOf(q)>=0;
   }));
@@ -346,6 +347,7 @@ function viewPruefen(){
   var all=allAll.filter(function(a){return gruppe(a)===S.gruppe});
   var open=all.filter(needsCheck);
   var chips='<button class="chip" type="button" data-act="lager" data-l="Zu prüfen" aria-pressed="'+(S.lager==='Zu prüfen')+'">Zu prüfen <small>'+open.length+'</small></button>'+
+    '<button class="chip" type="button" data-act="lager" data-l="Geprüft" aria-pressed="'+(S.lager==='Geprüft')+'">Geprüft <small>'+(all.length-open.length)+'</small></button>'+
     '<button class="chip" type="button" data-act="lager" data-l="Alle" aria-pressed="'+(S.lager==='Alle')+'">Alle <small>'+all.length+'</small></button>';
   LAGER.forEach(function(l){
     var it=all.filter(function(a){return a.lager===l});if(!it.length)return;
@@ -531,6 +533,7 @@ async function setStatus(id,s){
   var weg=(a.status===s);   // dieselbe Taste noch einmal: Auswahl zurücknehmen
   if(!weg&&needName())return;
   var now=weg?null:new Date().toISOString(),st=weg?null:s,wer=weg?null:S.who.trim();S.keep[id]=1;
+  setTimeout(function(){delete S.keep[id];if(S.tab==='pruefen')softRender()},1500);
   var prev={status:a.status,geprueft:a.geprueft,von:a.von};
   a.status=st;a.geprueft=now;a.von=wer;render();
   try{await S.db.doc('artikel/'+id).update({status:st,geprueft:now,von:wer})}
@@ -548,6 +551,7 @@ async function restGenug(){
     catch(e){toast('Gestoppt bei „'+a.name+'“: '+(e.message||e.code));break}
   }
   S.busy=false;if(ok)toast(ok+' Artikel auf „Genug“ gesetzt');render();
+  setTimeout(function(){S.keep={};if(S.tab==='pruefen')softRender()},1500);
 }
 async function freigeben(){
   var v=liste(true),lines=v.lines.filter(function(l){return l.menge>0});
