@@ -221,10 +221,14 @@ function rhythmusText(a){var r=rhythmus(a);return r==='taeglich'?'täglich':(r==
 function menge(a){return a.menge!=null?a.menge:(a.soll!=null?a.soll:null)}
 function schwelle(a){return a.schwelle!=null?a.schwelle:(a.min!=null?a.min:null)}
 function schwellenText(a){var s=schwelle(a);if(s==null)return '';return s>0?'Knapp bei '+nf(s)+' oder weniger':'Knapp = nur noch eine Einheit, leer = nichts mehr'}
+function letzteBestellung(){var o=S.best.filter(function(x){return x.status!=='storniert'})[0];return o?new Date(o.datum):null}
 function roundStart(a,now){
-  var r=rhythmus(a),days=r==='taeglich'?[0,1,2,3,4,5,6]:(r==='mo+mi'?[1,3]:[1]);
-  for(var i=0;i<8;i++){var d=new Date(now);d.setDate(d.getDate()-i);d.setHours(0,0,0,0);if(days.indexOf(d.getDay())>=0)return d}
-  return new Date(0);
+  var r=rhythmus(a);
+  if(r==='taeglich'){var t=new Date(now);t.setHours(0,0,0,0);return t}
+  // Wöchentliche Prüfung: Die Einsortierung bleibt stehen, bis die Bestellung abgeschickt (freigegeben) wurde.
+  // Erst danach beginnt die nächste Runde. Sicherung: nach 14 Tagen ohne Bestellung gilt eine Prüfung als veraltet.
+  var grenze=new Date(now.getTime()-14*86400000),lb=letzteBestellung();
+  return lb&&lb>grenze?lb:grenze;
 }
 function needsCheck(a){return !a.geprueft||new Date(a.geprueft)<roundStart(a,new Date())}
 function nextDelivery(now){
