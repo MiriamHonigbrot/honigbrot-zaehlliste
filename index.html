@@ -127,7 +127,7 @@ td.r,th.r{text-align:right}
 @media (max-width:560px){.fg{grid-template-columns:1fr}}
 .fg label{display:grid;gap:4px;font-size:13px;color:var(--muted)}
 .fg .full{grid-column:1 / -1}
-textarea.txt{width:100%;min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px}
+textarea.txt{width:100%;min-height:260px;font-family:var(--font);font-size:15px;line-height:1.55}
 .flag{font-size:11px;border-radius:6px;padding:1px 6px;background:var(--honeybg);color:var(--honey);border:1px solid var(--honey);margin-left:4px}
 .flag.off{background:var(--surface2);color:var(--muted);border-color:var(--line)}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
@@ -494,10 +494,15 @@ function softRender(){
 function openModal(html){var m=$('#modal');m.innerHTML='<div class="sheet" role="dialog" aria-modal="true">'+html+'</div>';m.hidden=false}
 function closeModal(){var m=$('#modal');m.hidden=true;m.innerHTML=''}
 function bestellText(o){
-  var L=['Bestellung Honigbrot GmbH, Café Honigbrot','Kundennummer: '+KUNDENNR,'Lieferung: '+(o.lieferung?fdate(parseDay(o.lieferung),{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'}):'nach Vereinbarung'),'','Art.-Nr.   Menge  Artikel'];
-  (o.zeilen||[]).forEach(function(z){L.push((z.nr||'—').padEnd(10)+' '+(String(z.menge)).padStart(5)+'  '+z.name+' ('+z.einheit+')')});
-  L.push('','Summe netto ca. '+eur(o.summe));
-  if(o.von)L.push('Bestellt von: '+o.von);
+  var L=['Guten Tag,','','bitte liefern Sie '+(o.lieferung?'am '+fdate(parseDay(o.lieferung),{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'}):'nach Vereinbarung')+' folgende Artikel an:','Honigbrot GmbH, Café Honigbrot'+(KUNDENNR?' · Kundennummer '+KUNDENNR:''),''];
+  var cur=null,n=0;
+  (o.zeilen||[]).forEach(function(z){
+    if(z.lager&&z.lager!==cur){cur=z.lager;if(n)L.push('');L.push(z.lager.toUpperCase())}
+    n++;
+    L.push(nf(z.menge)+' × '+z.name+' ('+z.einheit+') – '+(z.nr?'Art.-Nr. '+z.nr:'Art.-Nr. unbekannt'));
+    if(z.anm)L.push('   Hinweis: '+z.anm);
+  });
+  L.push('','Vielen Dank und viele Grüße','Café Honigbrot'+(o.von?' ('+o.von+')':''));
   return L.join('\n');
 }
 function showText(o){
@@ -562,7 +567,7 @@ async function freigeben(){
   if(!lines.length){toast('Keine Positionen zu bestellen.');return}
   if(needName())return;
   var nd=nextDelivery(new Date()),sum=0;
-  var zeilen=lines.map(function(l){sum+=(l.a.preis||0)*l.menge;return {id:l.a.id,nr:l.a.nr||null,name:ln(l.a),einheit:l.a.einheit,menge:l.menge,preis:l.a.preis||0,ust:l.a.ust||7,meldung:l.extra?'sonder':l.a.status}});
+  var zeilen=lines.map(function(l){sum+=(l.a.preis||0)*l.menge;return {id:l.a.id,nr:l.a.nr||null,name:ln(l.a),einheit:l.a.einheit,menge:l.menge,preis:l.a.preis||0,ust:l.a.ust||7,meldung:l.extra?'sonder':l.a.status,lager:l.a.lager||null,anm:l.a.anmerkung||null}});
   var doc={datum:new Date().toISOString(),lieferung:nd?dayKey(nd.lieferung):null,von:S.who.trim(),status:'offen',summe:Math.round(sum*100)/100,zeilen:zeilen};
   S.busy=true;render();
   try{var ref=S.db.collection('bestellungen').doc();await ref.set(doc);for(var i=0;i<lines.length;i++){if(lines[i].extra){try{await S.db.doc('artikel/'+lines[i].a.id).update({extra:null})}catch(e){}}}S.override={};S.busy=false;toast('Bestellung gespeichert. Jetzt bei CC aufgeben.');showText(Object.assign({id:ref.id},doc))}
