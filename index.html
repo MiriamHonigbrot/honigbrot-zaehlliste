@@ -520,6 +520,7 @@ function editor(a){
     '<label class="full">Name in der Abfrage<input id="e-name" value="'+esc(a.name)+'"></label>'+'<label class="full">Langbezeichnung für Bestell- und Einkaufsliste<input id="e-langname" value="'+esc(a.langname||'')+'"></label>'+'<label class="full">Hinweis (erscheint in Abfrage und Listen)<input id="e-anm" value="'+esc(a.anmerkung||'')+'"></label>'+
     '<label>Kanal<select id="e-kanal">'+opt(KANAELE,a.kanal)+'</select></label>'+
     '<label>Lagerort<select id="e-lager">'+opt(LAGER,a.lager)+'</select></label>'+
+    '<label class="full">Bereich in der Abfrage<select id="e-bereich">'+[['','Automatisch (nach Kanal)'],['Bestellen','Zum Bestellen (Chefs Culinar)'],['Einkaufen','Supermarkt'],['Getränke','Getränke']].map(function(o){return '<option value="'+o[0]+'"'+((a.bereich||'')===o[0]?' selected':'')+'>'+o[1]+'</option>'}).join('')+'</select></label>'+
     '<label>Einheit beim Bestellen<input id="e-einheit" value="'+esc(a.einheit)+'"></label>'+
     '<label>Artikelnummer (CC)<input id="e-nr" value="'+esc(a.nr||'')+'"></label>'+
     '<label>Knapp bei (diese Menge oder weniger)<input id="e-schwelle" type="number" inputmode="decimal" min="0" step="any" value="'+(schwelle(a)==null?'':schwelle(a))+'"></label>'+
@@ -598,7 +599,7 @@ async function bucheEingang(id){
 async function saveArtikel(id){
   var g=function(x){return document.getElementById(x)};
   var name=g('e-name').value.trim();if(!name){toast('Bitte einen Namen eintragen.');return}
-  var data={name:name,langname:g('e-langname').value.trim()||null,anmerkung:g('e-anm').value.trim()||null,kanal:g('e-kanal').value,lager:g('e-lager').value,einheit:g('e-einheit').value.trim()||'Stück',nr:g('e-nr').value.trim()||null,
+  var data={name:name,langname:g('e-langname').value.trim()||null,anmerkung:g('e-anm').value.trim()||null,kanal:g('e-kanal').value,lager:g('e-lager').value,bereich:g('e-bereich').value,einheit:g('e-einheit').value.trim()||'Stück',nr:g('e-nr').value.trim()||null,
     menge:num(g('e-menge').value),schwelle:num(g('e-schwelle').value),preis:num(g('e-preis').value),typ:g('e-typ').value,rhythmus:g('e-rh').value,schritt:parseFloat(g('e-schritt').value)||1,
     notiz:g('e-notiz').value.trim(),aktiv:g('e-aktiv').checked,vorlaeufig:!g('e-ok').checked};
   try{
