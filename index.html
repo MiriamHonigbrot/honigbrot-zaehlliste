@@ -77,6 +77,7 @@ h2{font-family:var(--display);font-size:13px;letter-spacing:.14em;text-transform
 .tb.ok.on{background:var(--ok-solid);border-color:var(--ok-solid);color:var(--ok-ink)}
 .tb.knapp.on{background:var(--knapp-solid);border-color:var(--knapp-solid);color:var(--knapp-ink)}
 .tb.leer.on{background:var(--leer-solid);border-color:var(--leer-solid);color:var(--leer-ink)}
+.tb.prev{border-style:dashed;color:var(--muted)}
 .tb:disabled{opacity:.5;cursor:not-allowed}
 .btn{font-family:var(--display);font-weight:700;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:12px 18px;min-height:48px;cursor:pointer;font-size:15px}
 .btn.primary{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
@@ -318,7 +319,9 @@ function rowHtml(a){
   var wtxt=when?(chk?'zuletzt ':'')+fdate(when)+(a.von?' ('+esc(a.von)+')':''):'noch nie geprüft';
   var offen=S.ready?offenMap()[a.id]:0;
   var dis=S.canWrite?'':' disabled';
-  var btn=function(k){return '<button class="tb '+k+(st===k?' on':'')+'" type="button" data-act="set" data-id="'+esc(a.id)+'" data-s="'+k+'" aria-pressed="'+(st===k)+'"'+dis+'>'+STAT[k]+'</button>'};
+  // Ist die Prüfung dieser Runde noch offen (chk), gilt die alte Antwort nur als Hinweis und ist nicht vorgewählt.
+  var cur=chk?null:st;
+  var btn=function(k){return '<button class="tb '+k+(cur===k?' on':'')+(chk&&st===k?' prev':'')+'" type="button" data-act="set" data-id="'+esc(a.id)+'" data-s="'+k+'" aria-pressed="'+(cur===k)+'"'+dis+'>'+STAT[k]+'</button>'};
   return '<div class="row'+(chk?' stale':'')+'" data-row="'+esc(a.id)+'"><div><div class="nm">'+esc(a.name)+'</div><div class="sub"><span class="kn">'+esc(KLABEL[a.kanal]||a.kanal)+'</span>'+esc(a.einheit)+' · <span class="age">'+wtxt+'</span>'+(offen?' · bestellt: '+nf(offen):'')+'</div>'+(schwelle(a)==null?'':'<div class="sub"><b>'+schwellenText(a)+'</b> (in der Einheit oben)</div>')+(a.anmerkung?'<div class="sub anm">Hinweis: '+esc(a.anmerkung)+'</div>':'')+'</div>'+
     '<div class="tri">'+btn('ok')+btn('knapp')+btn('leer')+'</div></div>';
 }
@@ -535,7 +538,9 @@ function editor(a){
 function needName(){if(!S.who.trim()){toast('Bitte trag oben deinen Namen ein.');$('#who').focus();return true}return false}
 async function setStatus(id,s){
   var a=S.art.get(id);if(!a)return;
-  var weg=(a.status===s);   // dieselbe Taste noch einmal: Auswahl zurücknehmen
+  // Dieselbe Taste noch einmal: Auswahl zurücknehmen. Das gilt nur, wenn der Artikel in dieser Runde schon geprüft wurde;
+  // bei einer alten Antwort aus der letzten Runde bestätigt die Taste sie stattdessen.
+  var weg=(a.status===s)&&!needsCheck(a);
   if(!weg&&needName())return;
   var now=weg?null:new Date().toISOString(),st=weg?null:s,wer=weg?null:S.who.trim();S.keep[id]=1;
   setTimeout(function(){delete S.keep[id];if(S.tab==='pruefen')softRender()},1500);
